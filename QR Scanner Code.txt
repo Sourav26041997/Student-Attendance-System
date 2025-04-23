@@ -1,0 +1,53 @@
+import cv2
+from pyzbar.pyzbar import decode
+from warnings import filterwarnings
+import sys
+import os
+import contextlib
+
+filterwarnings(action='ignore')
+
+# Context manager to suppress stderr (ZBar warnings)
+@contextlib.contextmanager
+def suppress_stderr():
+    with open(os.devnull, 'w') as fnull:
+        old_stderr = sys.stderr
+        sys.stderr = fnull
+        try:
+            yield
+        finally:
+            sys.stderr = old_stderr
+
+def scan_qr():
+    cap = cv2.VideoCapture(0)
+    print("📷 Scanning... Show your QR Code to the camera.")
+
+    try:
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                print("❌ Failed to grab frame from webcam.")
+                continue
+
+            # Suppress decode stderr noise
+            with suppress_stderr():
+                decoded_objs = decode(frame)
+
+            cv2.imshow('QR Code Scanner - Press Q to Cancel', frame)
+
+            if decoded_objs:
+                for obj in decoded_objs:
+                    student_id = obj.data.decode()
+                    print(f"✅ QR Code Detected: {student_id}")
+                    return student_id
+
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                print("❌ QR scan cancelled by user.")
+                return None
+
+    finally:
+        cap.release()
+        try:
+            cv2.destroyAllWindows()
+        except cv2.error as e:
+            print("⚠️ OpenCV window cleanup error:", e)

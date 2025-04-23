@@ -1,0 +1,81 @@
+create database school;
+
+use school;
+
+
+CREATE TABLE student_basic_details (
+    student_id VARCHAR(20) PRIMARY KEY,
+    name VARCHAR(100) not null,
+    class VARCHAR(20) not null,
+    section VARCHAR(10) not null,
+    fees_status VARCHAR(20) not null,        -- 'paid' or 'unpaid'
+    student_status VARCHAR(20) not null     -- 'active' or 'inactive'
+);
+
+
+INSERT INTO student_basic_details (student_id, name, class, section, fees_status, student_status)
+VALUES 
+('S001', 'Aarav Sharma', '10', 'A', 'paid', 'active'),
+('S002', 'Isha Verma', '10', 'B', 'unpaid', 'inactive'),
+('S003', 'Vivaan Mehta', '11', 'A', 'paid', 'active'),
+('S004', 'Diya Patel', '11', 'B', 'unpaid', 'inactive'),
+('S005', 'Aditya Nair', '12', 'A', 'paid', 'active'),
+('S006', 'Anaya Reddy', '12', 'B', 'paid', 'active'),
+('S007', 'Krishna Rao', '9', 'A', 'unpaid', 'inactive'),
+('S008', 'Meera Iyer', '9', 'B', 'paid', 'active'),
+('S009', 'Arjun Das', '10', 'A', 'unpaid', 'inactive'),
+('S010', 'Saanvi Joshi', '10', 'B', 'paid', 'active'),
+('S011', 'Rohan Kapoor', '11', 'A', 'paid', 'active'),
+('S012', 'Tanya Bhatt', '11', 'B', 'unpaid', 'inactive'),
+('S013', 'Kunal Sengupta', '12', 'A', 'paid', 'active'),
+('S014', 'Neha Chatterjee', '12', 'B', 'unpaid', 'inactive'),
+('S015', 'Manav Kulkarni', '9', 'A', 'paid', 'active'),
+('S016', 'Avni Deshmukh', '9', 'B', 'paid', 'active'),
+('S017', 'Devansh Bansal', '10', 'A', 'unpaid', 'inactive'),
+('S018', 'Riya Tripathi', '10', 'B', 'paid', 'active'),
+('S019', 'Yash Malhotra', '11', 'A', 'unpaid', 'inactive'),
+('S020', 'Priya Bhargava', '11', 'B', 'paid', 'active');
+
+
+
+
+CREATE TABLE attendance (
+    student_id VARCHAR(20),
+    name VARCHAR(100),
+    class VARCHAR(20),
+    section VARCHAR(10),
+    attendance_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+
+
+CREATE TABLE log (
+    student_id VARCHAR(20),
+    problem TEXT,
+    log_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+
+
+CREATE TABLE attendance_duration (
+    student_id VARCHAR(20),
+    attendance_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    exit_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    duration VARCHAR(50)
+);
+
+
+truncate table attendance;
+truncate table log;
+truncate table attendance_duration;
+
+
+
+
+
+select * from student_basic_details;
+select * from log;
+select * from attendance;
+select * from attendance_duration;

@@ -1,0 +1,170 @@
+import pymysql
+from qrscanner import scan_qr  # Import the QR scanner module
+
+# Database connection
+conn_obj = pymysql.connect(
+    host="localhost",
+    user="root",
+    password="sourav@1997",
+    database="school"
+)
+cur_obj = conn_obj.cursor()
+
+# Get student data from the database
+def get_student_data(student_id):
+    select_query = "SELECT * FROM student_basic_details WHERE student_id = %s"
+    try:
+        cur_obj.execute(select_query, (student_id,))
+        result = cur_obj.fetchone()
+        if result:
+            return list(result)  # Convert tuple to list for indexing
+        else:
+            return None  # Student ID not found
+    except:
+        print("\u274c Error retrieving student data.")
+        return None
+
+
+# Verify and store attendance if student is active
+def verify_and_store_attendance(student_id):
+    student_data = get_student_data(student_id)
+    if student_data and student_data[5].lower() == 'active':
+        insert_query = """
+            INSERT INTO attendance (student_id, name, class, section)
+            VALUES (%s, %s, %s, %s)
+        """
+        values = (student_data[0], student_data[1], student_data[2], student_data[3])
+        try:
+            cur_obj.execute(insert_query, values)
+            conn_obj.commit()
+            print("\u2705 Attendance recorded.")
+        except:
+            conn_obj.rollback()
+            print("\u274c Error inserting into attendance table.")
+
+
+# Log an entry if student ID is not found in the database
+def student_not_found(student_id):
+    select_query = "SELECT * FROM student_basic_details WHERE student_id = %s"
+    cur_obj.execute(select_query, (student_id,))
+    result = cur_obj.fetchone()
+    if not result:
+        insert_log = "INSERT INTO log (student_id, problem) VALUES (%s, %s)"
+        values = (student_id, "student id not existed")
+        try:
+            cur_obj.execute(insert_log, values)
+            conn_obj.commit()
+            print("\u26a0\ufe0f Student ID not found. Logged to log table.")
+        except:
+            conn_obj.rollback()
+            print("\u274c Error logging missing student ID.")
+
+
+# Log an entry if the student is inactive
+def log_inactive(student_id):
+    select_query = "SELECT * FROM student_basic_details WHERE student_id = %s"
+    cur_obj.execute(select_query, (student_id,))
+    result = cur_obj.fetchone()
+    if result:
+        student_status = result[5].lower()
+        fees_paid = result[4].lower()
+        if student_status != "active" and fees_paid != "paid":
+            insert_log = "INSERT INTO log (student_id, problem) VALUES (%s, %s)"
+            values = (student_id, "Student status is inactive for fees due")
+            try:
+                cur_obj.execute(insert_log, values)
+                conn_obj.commit()
+                print("\u26a0\ufe0f Student status is inactive, please contact with school admin")
+            except:
+                conn_obj.rollback()
+                print("\u274c Error logging")
+
+
+# Calculate session duration and store it in the database
+def calculate_duration_and_store(student_id):
+    # Get the most recent attendance time for the student
+    select_query = "SELECT attendance_time FROM attendance WHERE student_id = %s ORDER BY attendance_time DESC LIMIT 1"
+    cur_obj.execute(select_query, (student_id,))
+    result = cur_obj.fetchone()
+
+    if result:
+        attendance_time = result[0]
+        print(f"Attendance Time: {attendance_time}")  # Debugging step to see if we get the correct time
+
+        # Get the current time (exit time)
+        cur_obj.execute("SELECT NOW()")
+        exit_time = cur_obj.fetchone()[0]
+        print(f"Exit Time: {exit_time}")  # Debugging step to ensure exit time is correctly fetched
+
+        # Calculate the duration using MySQL's TIMEDIFF function
+        cur_obj.execute("SELECT TIMEDIFF(%s, %s)", (exit_time, attendance_time))
+        duration = cur_obj.fetchone()[0]
+        print(f"Duration: {duration}")  # Debugging step to check if the duration is correct
+
+        # Insert the duration record into the attendance_duration table
+        insert_duration_query = """
+            INSERT INTO attendance_duration (student_id, attendance_time, exit_time, duration)
+            VALUES (%s, %s, %s, %s)
+        """
+        values = (student_id, attendance_time, exit_time, str(duration))
+
+        try:
+            cur_obj.execute(insert_duration_query, values)
+            conn_obj.commit()
+            print(f"\u2705 Duration recorded for student ID {student_id}: {duration}")
+        except pymysql.MySQLError as e:
+            conn_obj.rollback()
+            print(f"\u274c Error inserting duration data: {e}")
+    else:
+        print("\u274c Student ID not found in attendance table.")
+
+
+# Main program logic
+def main():
+    while True:
+        print("\nChoose an option:")
+        print("Press - 1 for Check Attendance")
+        print("Press - 2 for End Session")
+        print("Press - 3 for Exit")
+
+        user_choice = input("Enter your choice (1/2/3): ")
+
+        if user_choice == "1":
+            # Option 1: Check Attendance
+            student_id = scan_qr()  # Scan QR code to get student ID
+            student_data = get_student_data(student_id)
+
+            if not student_data:
+                student_not_found(student_id)
+            elif student_data[5].lower() != 'active':
+                log_inactive(student_id)
+            else:
+                verify_and_store_attendance(student_id)
+
+        elif user_choice == "2":
+            # Option 2: End Session and Calculate Duration
+            student_id = scan_qr()  # Scan QR code to get student ID
+            student_data = get_student_data(student_id)
+
+            if student_data:
+                calculate_duration_and_store(student_id)
+            else:
+                print("❌ Student ID not found.")
+
+        elif user_choice == "3":
+            # ✅ Exit option
+            print("👋 Exiting Attendance System...")
+            break
+
+        else:
+            print("❌ Invalid option. Please try again.")
+
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    finally:
+        cur_obj.close()
+        conn_obj.close()
+        print("✅ Database connection closed.")
