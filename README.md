@@ -1,2 +1,2 @@
-# Student-Attendance-System
+#STUDENT-ATTENDANCE-SYSTEM
 Python &amp; Mysql
